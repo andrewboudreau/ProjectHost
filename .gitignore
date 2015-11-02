@@ -8,8 +8,7 @@
 *.sln.docstates
 
 # Secret Files
-*.secret.config
-*.secrets.config
+*secret*
 
 # Build results
 [Dd]ebug/
