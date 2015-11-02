@@ -7,6 +7,10 @@
 *.userosscache
 *.sln.docstates
 
+# Secret Files
+*.secret.config
+*.secrets.config
+
 # Build results
 [Dd]ebug/
 [Dd]ebugPublic/
@@ -229,3 +233,4 @@ $RECYCLE.BIN/
 
 # Windows shortcuts
 *.lnk
+.vs/config/applicationhost.config
