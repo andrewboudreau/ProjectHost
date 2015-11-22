@@ -1,13 +1,21 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Configuration;
 using System.Data;
 using System.Data.Entity;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Net;
 using System.Web;
 using System.Web.Mvc;
+using Microsoft.Data.OData.Atom;
 using ProjectHost.Models;
+
+using Microsoft.WindowsAzure;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace ProjectHost.Controllers
 {
@@ -21,7 +29,7 @@ namespace ProjectHost.Controllers
             if (id.HasValue)
             {
                 ViewBag.Id = id;
-                return View(await db.Releases.Include(r => r.Project).Where(x=> x.ProjectId == id.Value).ToListAsync());
+                return View(await db.Releases.Include(r => r.Project).Where(x => x.ProjectId == id.Value).ToListAsync());
             }
 
             return View(await db.Releases.Include(r => r.Project).ToListAsync());
@@ -46,7 +54,7 @@ namespace ProjectHost.Controllers
         public ActionResult Create(int? id)
         {
             ViewBag.Projects = new SelectList(db.Projects.ToList(), "Id", "Name", id.GetValueOrDefault());
-            return View(new Release() {ProjectId = id.GetValueOrDefault()});
+            return View(new Release { ProjectId = id.GetValueOrDefault() });
         }
 
         // POST: Releases/Create
@@ -54,27 +62,33 @@ namespace ProjectHost.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Create([Bind(Include = "Id,Version,Notes,DownloadUrl,SourceCodeUrl,ReleaseDate,ProjectId")] Release release)
+        public async Task<ActionResult> Create([Bind(Include = "Id,Version,Notes,DownloadUrl,SourceCodeUrl,ReleaseDate,ProjectId")] Release release, HttpPostedFileBase file)
         {
             var ver = "";
             if (db.Releases.Any(r => r.Version == release.Version && r.ProjectId == release.ProjectId))
             {
-                ModelState.AddModelError("Version", $"{release.Version} version is already deployed, suggested '{BumpVersion(release.Version)}'");
-                ver = BumpVersion(release.Version);
+                ModelState.AddModelError("Version", $"{release.Version} version is already deployed, suggested '{IncrementVersion(release.Version)}'");
+                ver = IncrementVersion(release.Version);
             }
 
-            if (ModelState.IsValid)
+            if (!ModelState.IsValid)
             {
-                db.Releases.Add(release);
-                await db.SaveChangesAsync();
-                return RedirectToAction("Index");
+                ViewBag.Projects = new SelectList(db.Projects.ToList(), "Id", "Name");
+                release.Version = ver;
+                return View(release);
+            }
+            db.Releases.Add(release);
+
+            if (file?.InputStream != null)
+            {
+                release.DownloadUrl = (await WriteReleaseBinary(release, file)).ToString();
             }
 
-            ViewBag.Projects = new SelectList(db.Projects.ToList(), "Id", "Name");
-            release.Version = ver;
-            return View(release);
+            await db.SaveChangesAsync();
+
+            return RedirectToAction("Index");
         }
-        
+
         // GET: Releases/Edit/5
         public async Task<ActionResult> Edit(int? id, int? projectId)
         {
@@ -98,7 +112,7 @@ namespace ProjectHost.Controllers
         // more details see http://go.microsoft.com/fwlink/?LinkId=317598.
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<ActionResult> Edit([Bind(Include = "Id,Version,Notes,DownloadUrl,SourceCodeUrl,ReleaseDate")] Release release)
+        public async Task<ActionResult> Edit([Bind(Include = "Id,Version,Notes,DownloadUrl,SourceCodeUrl,ReleaseDate")] Release release, HttpPostedFileBase file)
         {
             if (ModelState.IsValid)
             {
@@ -137,6 +151,19 @@ namespace ProjectHost.Controllers
             return RedirectToAction("Index");
         }
 
+        public async Task<ActionResult> Download(int projectId, int releaseId)
+        {
+            var release = db.Releases.FirstOrDefault(r => r.ProjectId == projectId && r.Id == releaseId);
+            if (release == null)
+            {
+                return HttpNotFound();
+            }
+
+            var file = await ReadReleaseBinary(release);
+
+            return File(file.Stream, MimeMapping.GetMimeMapping(file.Name), file.Name);
+        }
+
         protected override void Dispose(bool disposing)
         {
             if (disposing)
@@ -151,17 +178,63 @@ namespace ProjectHost.Controllers
         /// </summary>
         /// <param name="version"></param>
         /// <returns></returns>
-        private string BumpVersion(string version)
+        private string IncrementVersion(string version)
         {
             if (version.Contains("-"))
             {
-                var major =  version.Split('-')[0];
+                var major = version.Split('-')[0];
                 var build = int.Parse(version.Split('-')[1]) + 1;
 
                 return $"{major}-{build}";
             }
 
             return $"{version}-1";
+        }
+
+        private static CloudBlockBlob GetBlob(Release release)
+        {
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(ConfigurationManager.AppSettings["StorageConnectionString"]);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference($"project-{release.ProjectId}");
+
+            container.CreateIfNotExists();
+            container.SetPermissions(new BlobContainerPermissions { PublicAccess = BlobContainerPublicAccessType.Blob });
+
+            var blob = container.GetBlockBlobReference($"release-{release.Id}");
+            return blob;
+        }
+
+        private static async Task<Uri> WriteReleaseBinary(Release release, HttpPostedFileBase file)
+        {
+            var blob = GetBlob(release);
+            blob.Metadata.Add("name", file.FileName);
+            blob.Metadata.Add("size", file.ContentLength.ToString());
+            await blob.UploadFromStreamAsync(file.InputStream);
+            await blob.SetMetadataAsync();
+
+            return blob.Uri;
+        }
+
+        private static async Task<StreamWithName> ReadReleaseBinary(Release release)
+        {
+            var ms = new MemoryStream();
+
+            var blob = GetBlob(release);
+            await blob.DownloadToStreamAsync(ms);
+            ms.Seek(0, SeekOrigin.Begin);
+
+            return new StreamWithName
+            {
+                Name = blob.Metadata["name"],
+                Stream = ms
+            };
+        }
+
+        private class StreamWithName
+        {
+            public Stream Stream { get; set; }
+
+            public string Name { get; set; }
         }
     }
 }
