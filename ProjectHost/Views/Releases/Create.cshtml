@@ -1,0 +1,178 @@
+﻿@model ProjectHost.Models.Release
+
+@{
+    ViewBag.Title = "Create";
+}
+
+<h2>Create a New Release <small>for an existing project</small></h2>
+<hr />
+
+<div class="row">
+    <div class="col-md-12">
+        <form id="form1" enctype="multipart/form-data" method="post">
+            @Html.AntiForgeryToken()   <div class="form-horizontal">
+                @Html.ValidationSummary(true, "", new { @class = "text-danger" })
+
+                <div class="form-group">
+                    @Html.LabelFor(model => model.Project, htmlAttributes: new { @class = "control-label col-md-2" })
+                    <div class="col-md-10">
+                        @Html.DropDownList("ProjectId", ViewBag.Projects as SelectList, htmlAttributes: new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.Project, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    @Html.LabelFor(model => model.Version, htmlAttributes: new { @class = "control-label col-md-2" })
+                    <div class="col-md-10">
+                        @Html.EditorFor(model => model.Version, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(model => model.Version, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    @Html.LabelFor(model => model.Notes, htmlAttributes: new { @class = "control-label col-md-2" })
+                    <div class="col-md-10">
+                        @Html.TextAreaFor(model => model.Notes, new { @class = "form-control" })
+                        @Html.ValidationMessageFor(model => model.Notes, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="file" class="control-label col-md-2">Release Binary</label>
+                    <div class="col-md-10">
+                        <input type="file" id="file" name="file" class="form-control">
+                    </div>
+                </div>
+
+
+                <div class="form-group">
+                    @Html.LabelFor(model => model.DownloadUrl, htmlAttributes: new { @class = "control-label col-md-2" }, labelText: "Download URL")
+                    <div class="col-md-10">
+                        @Html.EditorFor(model => model.DownloadUrl, new { htmlAttributes = new { @class = "form-control", placeholder = "http://www.domain.com/myfile.zip" } })
+                        @Html.ValidationMessageFor(model => model.DownloadUrl, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    @Html.LabelFor(model => model.SourceCodeUrl, htmlAttributes: new { @class = "control-label col-md-2" }, labelText: "Source Control URL")
+                    <div class="col-md-10">
+                        @Html.EditorFor(model => model.SourceCodeUrl, new { htmlAttributes = new { @class = "form-control" } })
+                        @Html.ValidationMessageFor(model => model.SourceCodeUrl, "", new { @class = "text-danger" })
+                    </div>
+                </div>
+
+                @Html.HiddenFor(m => m.ReleaseDate)
+                <div class="form-group">
+                    <div class="col-md-offset-2 col-md-10">
+                        <input type="submit" value="Create" class="btn btn-success" />
+                        <a href="@Url.Action("Index")" class="btn btn-default">Cancel</a>
+                    </div>
+                </div>
+            </div>
+        </form>
+
+    </div>
+    @*<div class="col-md-6">
+            <form id="form1" enctype="multipart/form-data" method="post" action="Upload.aspx">
+                <div class="row">
+                    <label for="fileToUpload">Select a File to Upload</label><br />
+                    <input type="file" name="fileToUpload" id="fileToUpload" onchange="fileSelected();" />
+                </div>
+                <div id="fileName"></div>
+                <div id="fileSize"></div>
+                <div id="fileType"></div>
+                <div class="row">
+                    <input type="button" onclick="uploadFile()" value="Upload" />
+                </div>
+                <div id="progressNumber"></div>
+            </form>
+        </div>*@
+
+</div>
+@section Scripts {
+    <script>
+        $("#Notes").focus();
+
+        function fileSelected() {
+            var file = document.getElementById('fileToUpload').files[0];
+            if (file) {
+                var fileSize = 0;
+                if (file.size > 1024 * 1024)
+                    fileSize = (Math.round(file.size * 100 / (1024 * 1024)) / 100).toString() + 'MB';
+                else
+                    fileSize = (Math.round(file.size * 100 / 1024) / 100).toString() + 'KB';
+
+                document.getElementById('fileName').innerHTML = 'Name: ' + file.name;
+                document.getElementById('fileSize').innerHTML = 'Size: ' + fileSize;
+                document.getElementById('fileType').innerHTML = 'Type: ' + file.type;
+            }
+        }
+
+        function uploadFile() {
+            var xhr = new XMLHttpRequest();
+            var fd = document.getElementById('form1').getFormData();
+
+            /* event listners */
+            xhr.upload.addEventListener("progress", uploadProgress, false);
+            xhr.addEventListener("load", uploadComplete, false);
+            xhr.addEventListener("error", uploadFailed, false);
+            xhr.addEventListener("abort", uploadCanceled, false);
+
+            /* Be sure to change the url below to the url of your upload server side script */
+            xhr.open("POST", "UploadMinimal.aspx");
+            xhr.send(fd);
+        }
+
+        function uploadProgress(evt) {
+            if (evt.lengthComputable) {
+                var percentComplete = Math.round(evt.loaded * 100 / evt.total);
+                document.getElementById('progressNumber').innerHTML = percentComplete.toString() + '%';
+            }
+            else {
+                document.getElementById('progressNumber').innerHTML = 'unable to compute';
+            }
+        }
+
+        function uploadComplete(evt) {
+            /* This event is raised when the server send back a response */
+            console.log(evt.target.responseText);
+        }
+
+        function uploadFailed(evt) {
+            console.log("There was an error attempting to upload the file.");
+        }
+
+        function uploadCanceled(evt) {
+            console.log("The upload has been canceled by the user or the browser dropped the connection.");
+        }
+
+        var dropbox;
+
+        dropbox = document.getElementById("dropbox");
+        dropbox.addEventListener("dragenter", dragenter, false);
+        dropbox.addEventListener("dragover", dragover, false);
+        dropbox.addEventListener("drop", drop, false);
+
+        function dragenter(e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        function dragover(e) {
+            e.stopPropagation();
+            e.preventDefault();
+        }
+
+        function drop(e) {
+            e.stopPropagation();
+            e.preventDefault();
+
+            var dt = e.dataTransfer;
+            var files = dt.files;
+
+            console.log("handling file");
+            //handleFiles(files);
+        }
+
+    </script>
+}
