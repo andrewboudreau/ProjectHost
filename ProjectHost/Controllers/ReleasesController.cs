@@ -81,7 +81,7 @@ namespace ProjectHost.Controllers
 
             if (file?.InputStream != null)
             {
-                release.DownloadUrl = (await WriteReleaseBinary(release, file)).ToString();
+                release.DownloadUrl = (await WriteReleaseBinaryAsync(release, file)).ToString();
             }
 
             await db.SaveChangesAsync();
@@ -159,7 +159,7 @@ namespace ProjectHost.Controllers
                 return HttpNotFound();
             }
 
-            var file = await ReadReleaseBinary(release);
+            var file = await ReadReleaseBinaryAsync(release);
 
             return File(file.Stream, MimeMapping.GetMimeMapping(file.Name), file.Name);
         }
@@ -204,7 +204,7 @@ namespace ProjectHost.Controllers
             return blob;
         }
 
-        private static async Task<Uri> WriteReleaseBinary(Release release, HttpPostedFileBase file)
+        private static async Task<Uri> WriteReleaseBinaryAsync(Release release, HttpPostedFileBase file)
         {
             var blob = GetBlob(release);
             blob.Metadata.Add("name", file.FileName);
@@ -215,7 +215,7 @@ namespace ProjectHost.Controllers
             return blob.Uri;
         }
 
-        private static async Task<StreamWithName> ReadReleaseBinary(Release release)
+        private static async Task<StreamWithName> ReadReleaseBinaryAsync(Release release)
         {
             var ms = new MemoryStream();
 
