@@ -188,7 +188,6 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ActionResults\RssActionResult.cs" />
     <Compile Include="App_Start\ApplicationUserManager.cs" />
     <Compile Include="App_Start\BundleConfig.cs" />
     <Compile Include="App_Start\EmailService.cs" />
@@ -302,6 +301,7 @@
     <Content Include="Views\Projects\Index.cshtml" />
   </ItemGroup>
   <ItemGroup>
+    <Folder Include="ActionResults\" />
     <Folder Include="App_Data\" />
     <Folder Include="AspNetIdentity\" />
     <Folder Include="Views\Rss\" />
