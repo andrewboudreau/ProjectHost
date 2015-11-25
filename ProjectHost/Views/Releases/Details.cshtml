@@ -31,16 +31,26 @@
         </dt>
 
         <dd>
-            @Html.DisplayFor(model => model.DownloadUrl)
+            @if (!string.IsNullOrEmpty(Model.DownloadUrl))
+            {
+                @Html.DisplayNameFor(model => model.DownloadUrl)
+            }
+            else
+            {
+                <a href="@Url.Action("Download", "Releases", new { Model.Id })">@Url.Action("Download", "Releases", new { Model.Id })</a>
+            }
         </dd>
 
-        <dt>
-            @Html.DisplayNameFor(model => model.SourceCodeUrl)
-        </dt>
+        @if (!string.IsNullOrEmpty(Model.SourceCodeUrl))
+        {
+            <dt>
+                @Html.DisplayNameFor(model => model.SourceCodeUrl)
+            </dt>
 
-        <dd>
-            @Html.DisplayFor(model => model.SourceCodeUrl)
-        </dd>
+            <dd>
+                @Html.DisplayFor(model => model.SourceCodeUrl)
+            </dd>
+        }
 
         <dt>
             @Html.DisplayNameFor(model => model.ReleaseDate)
@@ -50,6 +60,12 @@
             @Html.DisplayFor(model => model.ReleaseDate)
         </dd>
 
+        <dt>
+            Project RSS
+        </dt>
+        <dd>
+            <a href="@Url.Action("Projects", "Rss", new { id = Model.ProjectId })">@Url.Action("Projects", "Rss", new { id = Model.ProjectId })</a>
+        </dd>
     </dl>
 </div>
 <p>

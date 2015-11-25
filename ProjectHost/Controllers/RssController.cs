@@ -41,27 +41,35 @@ namespace ProjectHost.Controllers
                 .OrderByDescending(r => r.Id)
                 .Take(50)
                 .ToListAsync();
-            
+
             var feed = new SyndicationFeed("ProjectHost", "ProjectHost Releases Feed", BaseUri, "ProjectHostAll", DateTime.Now);
-            var syndicationItems = new List<SyndicationItem>(50);
 
-            foreach (var release in releases)
+            var syndicationItems = releases.Select(MapReleaseToSyndicationItem).ToList();
+            feed.Items = syndicationItems;
+
+            return new RssActionResult() { Feed = feed };
+        }
+        
+        public async Task<ActionResult> Projects(int id)
+        {
+            var releases = await db.Releases
+               .AsNoTracking()
+               .Include(r => r.Project)
+               .Where(r => r.ProjectId == id)
+               .OrderByDescending(r => r.Id)
+               .Take(50)
+               .ToListAsync();
+
+            if (!releases.Any())
             {
-                var url = Url.Action("Download", "Releases", new { projectId = release.ProjectId, releaseId = release.Id });
-                if (url == null)
-                {
-                    throw new NullReferenceException("Release Download route has changed");
-                }
-
-                var title = $"{release.Project.Name} {release.Version}";
-                var content = $"Project:{release.Project.Name} {Environment.NewLine} Version:{release.Version} {Environment.NewLine} {release.Notes}";
-                var uriBuilder = new UriBuilder(BaseUri) { Path = url };
-                var item = new SyndicationItem(title, content, uriBuilder.Uri);
-
-                syndicationItems.Add(item);
+                return HttpNotFound("project not found or contains no releases");
             }
 
-            feed.Items = syndicationItems;
+            var project = releases.First().Project;
+
+            var feed = new SyndicationFeed(project.Name, project.Description, BaseUri, $"Project{id}", DateTime.Now);
+            feed.Items = releases.Select(MapReleaseToSyndicationItem).ToList();
+
             return new RssActionResult() { Feed = feed };
         }
 
@@ -74,19 +82,40 @@ namespace ProjectHost.Controllers
             base.Dispose(disposing);
         }
 
-        public class RssActionResult : ActionResult
+        private SyndicationItem MapReleaseToSyndicationItem(Release release)
         {
-            public SyndicationFeed Feed { get; set; }
-
-            public override void ExecuteResult(ControllerContext context)
+            var url = Url.Action("Download", "Releases", new { release.Id });
+            if (url == null)
             {
-                context.HttpContext.Response.ContentType = "application/rss+xml";
+                throw new NullReferenceException("Release Download route has changed");
+            }
 
-                Rss20FeedFormatter rssFormatter = new Rss20FeedFormatter(Feed);
-                using (XmlWriter writer = XmlWriter.Create(context.HttpContext.Response.Output))
-                {
-                    rssFormatter.WriteTo(writer);
-                }
+            var title = $"{release.Project.Name} {release.Version}";
+
+            var content = $"Project:{release.Project.Name} {Environment.NewLine} Version:{release.Version} {Environment.NewLine} {release.Notes}";
+
+            var uriBuilder = new UriBuilder(BaseUri)
+            {
+                Path = url
+            };
+
+            var item = new SyndicationItem(title, content, uriBuilder.Uri);
+            return item;
+        }
+    }
+
+    public class RssActionResult : ActionResult
+    {
+        public SyndicationFeed Feed { get; set; }
+
+        public override void ExecuteResult(ControllerContext context)
+        {
+            context.HttpContext.Response.ContentType = "application/rss+xml";
+
+            Rss20FeedFormatter rssFormatter = new Rss20FeedFormatter(Feed);
+            using (XmlWriter writer = XmlWriter.Create(context.HttpContext.Response.Output))
+            {
+                rssFormatter.WriteTo(writer);
             }
         }
     }

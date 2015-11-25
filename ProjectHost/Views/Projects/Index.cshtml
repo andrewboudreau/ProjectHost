@@ -1,5 +1,4 @@
-﻿@using ProjectHost.HtmlExtensions
-@using ProjectHost.Models
+﻿@using ProjectHost.Models
 @model IEnumerable<Project>
 
 @{
@@ -13,13 +12,17 @@
 {
     <div class="panel panel-default">
         <div class="panel-heading">
-            <h3 class="panel-title"><a href="@Url.Action("Index", "Releases", new { project.Id })">@Html.DisplayFor(modelItem => project.Name) <small>@project.Description</small></a></h3>
+            <h3 class="panel-title">
+                <a href="@Url.Action("Index", "Releases", new {project.Id})">@Html.DisplayFor(modelItem => project.Name) <small>@project.Description</small></a>
+                <span class="pull-right"><a href="@Url.Action("Projects", "Rss", new { project.Id })">RSS</a></span>
+            </h3>
+            
         </div>
         <div class="panel-body">
             @if (latestRelease[project] != null)
             {
                 <span style="font-size: 18px;">
-                    @Html.DownloadReleaseLink(latestRelease[project], "Download Latest Release " + latestRelease[project].Version))
+                    <a href="@Url.Action("Download", "Releases", new { latestRelease[project].Id })">Download the Latest Release <small>[@latestRelease[project].Version]</small></a>
                 </span>
                 <p>@latestRelease[project].Notes</p>
             }

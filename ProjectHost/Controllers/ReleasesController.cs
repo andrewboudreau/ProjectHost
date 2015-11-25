@@ -151,9 +151,9 @@ namespace ProjectHost.Controllers
             return RedirectToAction("Index");
         }
 
-        public async Task<ActionResult> Download(int projectId, int releaseId)
+        public async Task<ActionResult> Download(int id)
         {
-            var release = db.Releases.FirstOrDefault(r => r.ProjectId == projectId && r.Id == releaseId);
+            var release = await db.Releases.FindAsync(id);
             if (release == null)
             {
                 return HttpNotFound();

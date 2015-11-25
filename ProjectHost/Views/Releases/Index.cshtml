@@ -1,5 +1,4 @@
-﻿@using ProjectHost.HtmlExtensions
-@model IEnumerable<ProjectHost.Models.Release>
+﻿@model IEnumerable<ProjectHost.Models.Release>
 
 @{
     ViewBag.Title = "Releases List";
@@ -34,13 +33,13 @@
         {
             <tr>
                 <td>
-                    @Html.DisplayFor(modelItem => item.Version)
+                    <a href="@Url.Action("Details", new { item.Id })">@Html.DisplayFor(modelItem => item.Version)</a>
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.Notes)
                 </td>
                 <td>
-                    @Html.DownloadReleaseLink(item, "Download Release")
+                    <a href="@Url.Action("Download", "Releases", new { item.Id })">Download Release</a>
                 </td>
                 <td>
                     @Html.DisplayFor(modelItem => item.ReleaseDate)
