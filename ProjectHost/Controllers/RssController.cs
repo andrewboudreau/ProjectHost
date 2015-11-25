@@ -92,7 +92,7 @@ namespace ProjectHost.Controllers
 
             var title = $"{release.Project.Name} {release.Version}";
 
-            var content = $"Project:{release.Project.Name} {Environment.NewLine} Version:{release.Version} {Environment.NewLine} {release.Notes}";
+            var content = $"Project:{release.Project.Name} \r\n Version:{release.Version} \r\n {release.Notes}";
 
             var uriBuilder = new UriBuilder(BaseUri)
             {
