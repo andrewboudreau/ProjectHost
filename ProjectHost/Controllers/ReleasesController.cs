@@ -77,14 +77,15 @@ namespace ProjectHost.Controllers
                 release.Version = ver;
                 return View(release);
             }
+
             db.Releases.Add(release);
+            await db.SaveChangesAsync();
 
             if (file?.InputStream != null)
             {
                 release.DownloadUrl = (await WriteReleaseBinaryAsync(release, file)).ToString();
+                await db.SaveChangesAsync();
             }
-
-            await db.SaveChangesAsync();
 
             return RedirectToAction("Index");
         }
